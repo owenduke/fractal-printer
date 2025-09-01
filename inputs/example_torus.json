@@ -1,0 +1,16 @@
+{
+    "distance_function" : "torus",
+    "arguments" : {
+        "ax" : 0.707,
+        "ay" : 0.707,
+        "major_radius" : 0.5
+    },
+    "mesh_arguments" : {
+        "level" : 0.5, 
+        "gradient_direction" : "ascent",
+        "step_size" : 10
+    },
+    "iteration_method" : "simple",
+    "levels" : 6,
+    "size" :2
+}

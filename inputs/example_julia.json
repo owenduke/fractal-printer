@@ -1,0 +1,19 @@
+{
+    "distance_function" : "generalized_mandelbrot",
+    "arguments" : {
+        "cx" : 0.363,
+        "cy" : -0.639,
+        "cz" : 0.664,
+        "iterations" : 5,
+        "power" : 2,
+        "bailout" : 10000
+    },
+    "mesh_arguments" : {
+        "level" : 0.5, 
+        "gradient_direction" : "ascent",
+        "step_size" : 10
+    },
+    "iteration_method" : "simple",
+    "levels" : 4,
+    "size" :2
+}
