@@ -12,8 +12,9 @@ import numpy as np
 import quaternion
 from sdf.sdf import d3
 
-def mag2(a):
-    return quaternion.as_float_array(a * a.conj())[...,0]
+
+def mag2(z):
+    return z * z.conj()
 
 @d3.sdf3
 def quaternion_julia_sdf(c, n = 2, iterations = 50, bailout_level = 10000**2, offset=0):
