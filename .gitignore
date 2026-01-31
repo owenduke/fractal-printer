@@ -1,6 +1,7 @@
 # Repo-specific
 output/*
 *.stl
+*.ply
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
