@@ -14,10 +14,10 @@ from sdf.sdf import d3
 
 
 def mag2(z):
-    return z * z.conj()
+    return quaternion.as_float_array(z * z.conj())[...,0]
 
 @d3.sdf3
-def quaternion_julia_sdf(c, w=0, n = 2, iterations = 50, bailout_level = 10000**2, offset=0):
+def quaternion_julia_sdf(c, w=0, n = 2, iterations = 50, bailout_level = 10000**2, offset=0, fudge_factor = 0.9):
 
     def distance(p):
         # Convert starting points to quaterinons
@@ -44,7 +44,7 @@ def quaternion_julia_sdf(c, w=0, n = 2, iterations = 50, bailout_level = 10000**
             new_bailout = (z2 > bailout_level) & ~bailout
             bailout = bailout | new_bailout
 
-        dist = np.sqrt(z2/zp2)*0.5*np.log(z2)
+        dist = np.sqrt(z2/zp2)*0.5*np.log(z2) * fudge_factor
         return dist - offset
 
     return distance
