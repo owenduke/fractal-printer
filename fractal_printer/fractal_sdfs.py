@@ -17,13 +17,13 @@ def mag2(z):
     return z * z.conj()
 
 @d3.sdf3
-def quaternion_julia_sdf(c, n = 2, iterations = 50, bailout_level = 10000**2, offset=0):
+def quaternion_julia_sdf(c, w=0, n = 2, iterations = 50, bailout_level = 10000**2, offset=0):
 
     def distance(p):
         # Convert starting points to quaterinons
         z = quaternion.from_float_array(
             np.concatenate(
-                (p,np.zeros((p.shape[:-1]+(1,)))),
+                (p,w*np.ones((p.shape[:-1]+(1,)))),
                 axis=1
             )
         )
