@@ -1,19 +1,14 @@
 {
-    "distance_function" : "generalized_mandelbrot",
-    "arguments" : {
-        "cx" : 0.363,
-        "cy" : -0.639,
-        "cz" : 0.664,
-        "iterations" : 5,
-        "power" : 2,
-        "bailout" : 10000
+    "fractal_arguments" : {
+        "cx" : [0.363, -1.0, 1.0, 0.01],
+        "cy" : [-0.639, -1.0, 1.0, 0.01],
+        "cz" : [0.664, -1.0, 1.0, 0.01],
+        "iterations" : [5,1,100,1],
+        "power" : [2,1,10,1],
+        "bailout" : [10000,1,100000,1]
     },
     "mesh_arguments" : {
-        "level" : 0.5, 
-        "gradient_direction" : "ascent",
-        "step_size" : 10
-    },
-    "iteration_method" : "simple",
-    "levels" : 4,
-    "size" :2
+        "radius" : 1.4, 
+        "log2_samples" : 28
+    }
 }
