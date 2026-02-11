@@ -44,7 +44,7 @@ def quaternion_julia_sdf(c, w=0, n = 2, iterations = 50, bailout_level = 10000**
             new_bailout = (z2 > bailout_level) & ~bailout
             bailout = bailout | new_bailout
 
-        dist = np.sqrt(z2/zp2)*0.5*np.log(z2) * fudge_factor
-        return dist - offset
+        dist = np.sqrt(z2/zp2)*0.5*np.log(z2)
+        return (dist - offset) * fudge_factor
 
     return distance

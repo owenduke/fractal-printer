@@ -32,13 +32,22 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.sidebar, stretch=0)
 
         # Shader options
-        controls_json = {
-            'width': {'min': 0.0, 'max': 1.0, 'step': 0.01, 'default': 1.0},
-            'height': {'min': 0.0, 'max': 1.0, 'step': 0.01, 'default': 1.0},
-            'depth': {'min': 0.0, 'max': 1.0, 'step': 0.01, 'default': 1.0},
+        controls_dict = {
+            'power': {"min": 2, "max": 20, "step" : 1, "default" : 2},
+            'cx': {'min': -2.0, 'max': 2.0, 'step': 0.01, 'default': 0.0},
+            'cy': {'min': -2.0, 'max': 2.0, 'step': 0.01, 'default': 0.0},
+            'cz': {'min': -2.0, 'max': 2.0, 'step': 0.01, 'default': 0.0},
+            'cw': {'min': -2.0, 'max': 2.0, 'step': 0.01, 'default': 0.0},
+            'slice': {'min': -2.0, 'max': 2.0, 'step': 0.01, 'default': 0.0},
+            'cx': {'min': -2.0, 'max': 2.0, 'step': 0.01, 'default': 0.0},
+            'offset': {'min': 0.0, 'max': 1.0, 'step': 0.01, 'default': 0.01},
+            'iterations': {'min': 1, 'max' : 100, 'step' : 1, 'default' : 40},
+            'bailout' : {'min' : 5, 'max' : 10000, 'step' : 1, 'default' : 1000}
         }
-        self.controls_panel = ControlsPanel(controls_json)
+
+        self.controls_panel = ControlsPanel(controls_dict)
         self.controls_panel.controlsChanged.connect(self.gl_widget.updateControls)
+        self.gl_widget.updateControls(self.controls_panel.get_controls())
         self.controls_panel.setMinimumWidth(300)
         sidebar_layout.addWidget(self.controls_panel, stretch=1)
 
