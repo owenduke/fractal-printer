@@ -33,7 +33,7 @@ class MainWindow(QMainWindow):
 
         # Shader options
         controls_dict = {
-            'power': {"min": 2, "max": 20, "step" : 1, "default" : 2},
+            'power': {"min": 2, "max": 5, "step" : 1, "default" : 2},
             'cx': {'min': -2.0, 'max': 2.0, 'step': 0.01, 'default': 0.0},
             'cy': {'min': -2.0, 'max': 2.0, 'step': 0.01, 'default': 0.0},
             'cz': {'min': -2.0, 'max': 2.0, 'step': 0.01, 'default': 0.0},
@@ -41,8 +41,8 @@ class MainWindow(QMainWindow):
             'slice': {'min': -2.0, 'max': 2.0, 'step': 0.01, 'default': 0.0},
             'cx': {'min': -2.0, 'max': 2.0, 'step': 0.01, 'default': 0.0},
             'offset': {'min': 0.0, 'max': 1.0, 'step': 0.01, 'default': 0.01},
-            'iterations': {'min': 1, 'max' : 100, 'step' : 1, 'default' : 40},
-            'bailout' : {'min' : 5, 'max' : 10000, 'step' : 1, 'default' : 1000}
+            'iterations': {'min': 1, 'max' : 30, 'step' : 1, 'default' : 15},
+            'bailout' : {'min' : 5, 'max' : 1000, 'step' : 1, 'default' : 100}
         }
 
         self.controls_panel = ControlsPanel(controls_dict)
@@ -72,6 +72,7 @@ class MainWindow(QMainWindow):
         self.bottom_layout.addWidget(self.progress)
 
         # Call the resize handler to initialize the viewport
+        print("Calling the resize event")
         self.resizeEvent(None)
         
     def resizeEvent(self, event):

@@ -23,40 +23,40 @@ vec4 qmul(vec4 a, vec4 b) {
         a.x*b.w + a.w*b.x + a.y*b.z - a.z*b.y);
 }
 vec4 qpow(vec4 a, int n) {
-    vec4 b = vec4(1,1,1,1);
+    vec4 b = vec4(a);
     
-    for (int i = 0; i < n; i++){
+    for (int i = 1; i < n; i++){
         b = qmul(b, a);
     }
     return b;
 }
-// SDF for a quaternionic julia set (prism)
+// SDF for a quaternionic julia set
 float juliaSDF(vec3 p, vec4 c, float w, int power, int iterations, int bailout, float offset) {
-    
     vec4 z = vec4(p,w);
     
-    float z2 = dot(z,z);
-    float zp2 = 1;
+    float z2 = dot(z, z);
+    float zp2 = 1.0;
 
     for (int i = 0; i < iterations; i++) {
-        zp2 = power*power*z2*zp2;
-        z = qpow(z, power);
+        zp2 = float(power * power) * pow(z2,power-1) * zp2;
+        z = qpow(z, power) + c;
         z2 = dot(z,z);
         if (z2 > bailout * bailout) {
             break;
         }
     }
 
-    float dist = sqrt(z2/zp2)*log(z2)*0.5;
+    float dist = sqrt(z2/zp2)*log(z2)*0.25;
     return dist - offset;
 }
 
 // Scene SDF
 float sceneSDF(vec3 p) {
-    //return juliaSDF(p, vec4(cx,cy,cz,cw), slice, power, iterations, bailout, offset);
-    return abs(p / vec3(1,2,4)) - 1;
-    //vec3 d = abs(p) - vec3(0.4,0.2,0.1);
-    //return length(max(d, 0.0)) + min(max(d.x, max(d.y, d.z)), 0.0);
+    float d = juliaSDF(p, vec4(cx,cy,cz,cw), slice, power, iterations, bailout, offset);
+    // Alternative simple test shape (uncomment if you need a box):
+    //return length(abs(p / vec3(1.0, 2.0, 4.0)) - vec3(1.0));
+    //return min(length(p-vec3(0.0,1.0,0.0)) - 1, length(p-vec3(0.0,-1.0,0.0)) - 1.5);// + 0.000000001*sin(d);
+    return d;
 }
 
 // Simple camera setup
@@ -81,16 +81,17 @@ vec3 getRayDir(vec2 uv, vec3 camPos) {
     return ray;
 }
 
-
 // Raymarching
 float raymarch(vec3 ro, vec3 rd, out vec3 pHit) {
     float t = 0.0;
+    //return sceneSDF(ro + rd * length(ro));
     for (int i = 0; i < 128; ++i) {
         pHit = ro + rd * t;
         float d = sceneSDF(pHit);
         if (d < 0.001) return t;
+        if (d > 1.0) d = 1.0;
         t += d;
-        if (t > 20.0) break;
+        if (t > 2*length(ro)) break;
     }
     return -1.0;
 }
@@ -98,6 +99,7 @@ float raymarch(vec3 ro, vec3 rd, out vec3 pHit) {
 // Normal estimation
 vec3 estimateNormal(vec3 p) {
     float eps = 0.001;
+    //return normalize(p);
     return normalize(vec3(
         sceneSDF(p + vec3(eps, 0, 0)) - sceneSDF(p - vec3(eps, 0, 0)),
         sceneSDF(p + vec3(0, eps, 0)) - sceneSDF(p - vec3(0, eps, 0)),
@@ -116,14 +118,16 @@ vec3 getLighting(vec3 p, vec3 n, vec3 ro) {
 
 void main() {
     vec3 camPos = getCameraPos();
+    //camPos = vec3(0.01,5,0);
     vec3 rayDir = getRayDir(uv, camPos);
     vec3 pHit;
     float t = raymarch(camPos, rayDir, pHit);
-    if (t > 0.0) {
+    //fragColor = vec4(0.5+sin(t)/2,float(t>0.0),0.0,1.0);
+    if (t>0.0) {
         vec3 n = estimateNormal(pHit);
         vec3 color = getLighting(pHit, n, camPos);
-        fragColor = vec4(color, 1.0);
+        fragColor = vec4(color,1.0);
     } else {
-        fragColor = vec4(0.1, 0.1, 0.15, 1.0);
+        fragColor = vec4(uv.x*0.1, uv.y*0.1, 0.15, 1.0);
     }
 }
