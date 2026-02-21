@@ -92,6 +92,8 @@ class ModernGLWidget(QOpenGLWidget):
             self.camera['distance']
         ])
 
+        self.prog['aspect'].value = self.ctx.viewport[2]/self.ctx.viewport[3]
+
         self.vao.render(mode = moderngl.TRIANGLE_STRIP)
         if self.ctx.error != "GL_NO_ERROR":
             print(f"OpenGL Error: {self.ctx.error}")
@@ -102,6 +104,7 @@ class ModernGLWidget(QOpenGLWidget):
         self.mouse_pos = (event.position().x(), event.position().y())
         self.camera['theta'] += dx * 0.01
         self.camera['phi'] += dy * 0.01
+        self.camera['phi'] = np.clip(self.camera['phi'], 1e-6, np.pi-1e-6)
         self.cameraMoved.emit(self.camera['theta'], self.camera['phi'])
         self.update()
 
