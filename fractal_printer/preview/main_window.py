@@ -3,6 +3,8 @@ from PyQt6.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFra
 from PyQt6.QtCore import pyqtSignal
 from fractal_printer.preview.modern_gl_widget import ModernGLWidget
 from fractal_printer.preview.controls_panel import ControlsPanel
+import pyperclip
+import json
 
 class MainWindow(QMainWindow):
     viewportResized = pyqtSignal(int, int)
@@ -40,7 +42,7 @@ class MainWindow(QMainWindow):
             'cw': {'min': -2.0, 'max': 2.0, 'step': 0.01, 'default': 0.0},
             'slice': {'min': -2.0, 'max': 2.0, 'step': 0.01, 'default': 0.0},
             'cx': {'min': -2.0, 'max': 2.0, 'step': 0.01, 'default': 0.0},
-            'offset': {'min': 0.0, 'max': 1.0, 'step': 0.01, 'default': 0.01},
+            'offset': {'min': 0.0, 'max': 0.1, 'step': 0.001, 'default': 0.01},
             'iterations': {'min': 1, 'max' : 30, 'step' : 1, 'default' : 15},
             'bailout' : {'min' : 5, 'max' : 1000, 'step' : 1, 'default' : 100}
         }
@@ -59,17 +61,15 @@ class MainWindow(QMainWindow):
         self.bottom_box.setLayout(self.bottom_layout)
         sidebar_layout.addWidget(self.bottom_box)
 
-        # Button
-        self.generate_btn = QPushButton("Generate Mesh")
-        self.generate_btn.clicked.connect(self.on_generate_mesh)
+        # Buttons
+        self.copy_btn = QPushButton("Copy Settings")
+        self.copy_btn.clicked.connect(self.on_copy_settings)
+        self.paste_btn = QPushButton("Paste Settings")
+        self.paste_btn.clicked.connect(self.on_paste_settings)
 
-        # Progress Bar
-        self.progress = QProgressBar()
-        self.progress.setMinimum(0)
-        self.progress.setMaximum(1) 
-        self.progress.setVisible(False)
-        self.bottom_layout.addWidget(self.generate_btn)
-        self.bottom_layout.addWidget(self.progress)
+
+        self.bottom_layout.addWidget(self.copy_btn)
+        self.bottom_layout.addWidget(self.paste_btn)
 
         # Call the resize handler to initialize the viewport
         print("Calling the resize event")
@@ -98,3 +98,13 @@ class MainWindow(QMainWindow):
         def finish():
             self.progress.setVisible(False)
         Timer(2.2, finish).start()
+
+    def on_copy_settings(self):
+        data_string = json.dumps(self.controls_panel.get_controls()).replace(",", ",\n")
+        print(data_string)
+        pyperclip.copy(data_string)
+
+    def on_paste_settings(self):
+        data_string = pyperclip.paste()
+        print(data_string)
+        self.controls_panel.set_controls(json.loads(data_string))
