@@ -5,6 +5,9 @@ from fractal_printer.preview.modern_gl_widget import ModernGLWidget
 from fractal_printer.preview.controls_panel import ControlsPanel
 import pyperclip
 import json
+import random
+
+RANDOM_ORDER = 3
 
 DEFAULT_SETTINGS = {
     "coefficients": [
@@ -24,6 +27,24 @@ DEFAULT_SETTINGS = {
     "iterations": 10,
     "bailout": 100
 }
+
+def _format_settings(settings):
+    keys = list(settings.keys())
+    lines = ["{"]
+    for idx, key in enumerate(keys):
+        comma = "," if idx < len(keys) - 1 else ""
+        value = settings[key]
+        if key == "coefficients":
+            lines.append('    "coefficients": [')
+            for i, c in enumerate(value):
+                c_comma = "," if i < len(value) - 1 else ""
+                lines.append(f"        {json.dumps(c)}{c_comma}")
+            lines.append(f"    ]{comma}")
+        else:
+            lines.append(f'    "{key}": {json.dumps(value)}{comma}')
+    lines.append("}")
+    return "\n".join(lines)
+
 
 class MainWindow(QMainWindow):
     viewportResized = pyqtSignal(int, int)
@@ -68,14 +89,21 @@ class MainWindow(QMainWindow):
         sidebar_layout.addWidget(self.bottom_box)
 
         # Buttons
+        big_label_style = "font-size: 14pt; font-weight: bold;"
+
         self.copy_btn = QPushButton("Copy Settings")
+        self.copy_btn.setStyleSheet(big_label_style)
         self.copy_btn.clicked.connect(self.on_copy_settings)
         self.paste_btn = QPushButton("Paste Settings")
+        self.paste_btn.setStyleSheet(big_label_style)
         self.paste_btn.clicked.connect(self.on_paste_settings)
-
+        self.randomize_btn = QPushButton("Randomize")
+        self.randomize_btn.setStyleSheet(big_label_style)
+        self.randomize_btn.clicked.connect(self.on_randomize_settings)
 
         self.bottom_layout.addWidget(self.copy_btn)
         self.bottom_layout.addWidget(self.paste_btn)
+        self.bottom_layout.addWidget(self.randomize_btn)
 
         # Put in the default values
         self.controls_panel.set_controls(DEFAULT_SETTINGS)
@@ -109,7 +137,7 @@ class MainWindow(QMainWindow):
         Timer(2.2, finish).start()
 
     def on_copy_settings(self):
-        data_string = json.dumps(self.controls_panel.get_controls()).replace(",", ",\n")
+        data_string = _format_settings(self.controls_panel.get_controls())
         print(data_string)
         pyperclip.copy(data_string)
 
@@ -117,3 +145,13 @@ class MainWindow(QMainWindow):
         data_string = pyperclip.paste()
         print(data_string)
         self.controls_panel.set_controls(json.loads(data_string))
+
+    def on_randomize_settings(self):
+        settings = json.loads(json.dumps(DEFAULT_SETTINGS))
+
+        settings["coefficients"] = [
+            [round(random.uniform(-1, 1), 3) for _ in range(4)] if n <= RANDOM_ORDER else [0, 0, 0, 0]
+            for n in range(len(settings["coefficients"]))
+        ]
+        settings["power"] = RANDOM_ORDER
+        self.controls_panel.set_controls(settings)
