@@ -66,16 +66,16 @@ float juliaSDF(vec3 p, vec4 c[9], float slice, int power, int iterations, int ba
             if (n==0){
                 z_ = z_ + c[n];
             } else if (n == 1){
-                z_ = z_ + c[n]*z;
+                z_ = z_ + qmul(c[n], z);
                 zp_ = zp_ + c[n];
             } else {
-                z_ = z_ + c[n] * qpow(z, n);
-                zp_ = zp_ + n * c[n] * qpow(z, n-1);
+                z_ = z_ + qmul(c[n], qpow(z, n));
+                zp_ = zp_ + n * qmul(c[n], qpow(z, n-1));
             }
         }
 
         z = z_;
-        zp = zp_ * zp;
+        zp = qmul(zp_, zp);
 
         z2 = dot(z,z);
         
@@ -84,7 +84,7 @@ float juliaSDF(vec3 p, vec4 c[9], float slice, int power, int iterations, int ba
             break;
         }
     }
-    
+
     zp2 = dot(zp, zp);
     float dist = sqrt(z2/zp2) * log(z2) / (float(power) * 2.0) ;
     return dist - (offset-0.001);

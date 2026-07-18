@@ -7,6 +7,7 @@ class CoupledBox(QWidget):
     def __init__(self, name: str, parent = None, max = 1, min = -1, step = 0.001, default = 0):
         super().__init__(parent)
         self.setLayout(QHBoxLayout())
+        self.layout().setContentsMargins(0, 0, 0, 0)
 
         self.label = QLabel(name)
         self.layout().addWidget(self.label)
@@ -58,8 +59,7 @@ class CoupledBox(QWidget):
         self.update_value()
 
     def toggle(self, state):
-        for w in [self.label, self.slider, self.lineedit]:
-            w.setVisible(state)
+        self.setVisible(state)
         self.value_changed.emit(self.value)
 
 class QuaternionSelector(QWidget):
@@ -67,13 +67,24 @@ class QuaternionSelector(QWidget):
     def __init__(self, name: str, parent = None):
         super().__init__(parent)
         self.setMinimumSize(QSize(0,0))
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setObjectName("quaternionSelector")
+        self.setStyleSheet(
+            "QWidget#quaternionSelector {"
+            "  background-color: rgba(128, 128, 128, 40);"
+            "  border-radius: 4px;"
+            "}"
+        )
         self.setLayout(QFormLayout())
-        self.layout().setVerticalSpacing(10)
+        self.layout().setVerticalSpacing(2)
+        self.layout().setContentsMargins(4, 4, 4, 4)
 
 
         titlebox = QHBoxLayout()
-        
-        titlebox.addWidget(QLabel(name))
+
+        namelabel = QLabel(name)
+        namelabel.setStyleSheet("font-weight: bold;")
+        titlebox.addWidget(namelabel)
 
         self.enabledbox = QCheckBox("Enable")
         self.enabledbox.checkStateChanged.connect(self.toggle)
@@ -82,6 +93,8 @@ class QuaternionSelector(QWidget):
         self.zerobutton = QPushButton("Clear")
         self.zerobutton.clicked.connect(self.clear)
         titlebox.addWidget(self.zerobutton)
+
+        titlebox.addStretch(1)
 
         self.layout().addRow(titlebox)
 
@@ -106,6 +119,7 @@ class QuaternionSelector(QWidget):
         
     def toggle(self):
         state = self.enabledbox.isChecked()
+        self.zerobutton.setVisible(state)
         for n in self.controls:
             self.controls[n].toggle(state)
     
@@ -121,6 +135,8 @@ class ControlsPanel(QScrollArea):
         self.setWidgetResizable(True)
         self.widget = QWidget()
         self.layout = QFormLayout()
+        self.layout.setVerticalSpacing(2)
+        self.layout.setContentsMargins(4, 4, 4, 4)
         self.widget.setLayout(self.layout)
         self.setWidget(self.widget)
 
