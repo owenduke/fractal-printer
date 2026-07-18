@@ -2,10 +2,7 @@
 in vec2 uv;
 out vec4 fragColor;
 
-uniform float cx;
-uniform float cy;
-uniform float cz;
-uniform float cw;
+uniform vec4 coefficients[9];
 uniform float slice;
 uniform int power;
 uniform int iterations;
@@ -31,34 +28,72 @@ vec4 qpow(vec4 a, int n) {
     }
     return b;
 }
+vec4 qpow2(vec4 a, int n) {
+    float mag = length(a);
+    float magn = pow(mag, float(n));
+
+    vec3 im = a.yzw;
+    float imMag = length(im);
+
+    // Handle near-zero imaginary part (pure real quaternion)
+    if (imMag < 1e-7) {
+        // a is essentially real; result is just mag^n (preserving sign if n is odd)
+        float realSign = a.x < 0.0 ? -1.0 : 1.0;
+        return vec4(magn * (mod(float(n), 2.0) == 0.0 ? 1.0 : realSign), 0.0, 0.0, 0.0);
+    }
+
+    float theta = acos(clamp(a.x / mag, -1.0, 1.0));
+    vec3 nHat = im / imMag;
+
+    float nTheta = float(n) * theta;
+    return vec4(magn * cos(nTheta), magn * sin(nTheta) * nHat);
+}
 // SDF for a quaternionic julia set
-float juliaSDF(vec3 p, vec4 c, float w, int power, int iterations, int bailout, float offset) {
-    vec4 z = vec4(p,w);
-    
+
+float juliaSDF(vec3 p, vec4 c[9], float slice, int power, int iterations, int bailout, float offset) {
+    vec4 z = vec4(p, slice);
+    vec4 zp = vec4(1,0,0,0);
+    vec4 z_ = vec4(0,0,0,0);
+    vec4 zp_ = vec4(0,0,0,0);
+
     float z2 = dot(z, z);
-    float zp2 = 1.0;
+    float zp2 = 0;
 
     for (int i = 0; i < iterations; i++) {
+        z_ = vec4(0,0,0,0);
+        zp_ = vec4(0,0,0,0);
+        for (int n = 0; n <= power; n++) {
+            if (n==0){
+                z_ = z_ + c[n];
+            } else if (n == 1){
+                z_ = z_ + c[n]*z;
+                zp_ = zp_ + c[n];
+            } else {
+                z_ = z_ + c[n] * qpow(z, n);
+                zp_ = zp_ + n * c[n] * qpow(z, n-1);
+            }
+        }
 
-        zp2 *= float(power * power) * pow(z2,power-1); 
-        zp2 = max(zp2, 1e-6);
-        z = qpow(z, power) + c;
+        z = z_;
+        zp = zp_ * zp;
+
         z2 = dot(z,z);
+        
+        //if (zp2 > 1e20) break;
         if (z2 > bailout * bailout) {
             break;
         }
     }
     
-    float dist = sqrt(z2/zp2)*log(z2)*0.25;
+    zp2 = dot(zp, zp);
+    float dist = sqrt(z2/zp2) * log(z2) / (float(power) * 2.0) ;
     return dist - (offset-0.001);
 }
 
 // Scene SDF
 float sceneSDF(vec3 p) {
-    float d = juliaSDF(p, vec4(cx,cy,cz,cw), slice, power, iterations, bailout, offset);
-    // Alternative simple test shape (uncomment if you need a box):
-    //return length(abs(p / vec3(1.0, 2.0, 4.0)) - vec3(1.0));
-    //return min(length(p-vec3(0.0,1.0,0.0)) - 1, length(p-vec3(0.0,-1.0,0.0)) - 1.5);// + 0.000000001*sin(d);
+    float d = juliaSDF(p, coefficients, slice, power, iterations, bailout, offset);
+    // step carefully near the origin
     return d;
 }
 
@@ -88,20 +123,13 @@ vec3 getRayDir(vec2 uv, vec3 camPos) {
 float raymarch(vec3 ro, vec3 rd, out vec3 pHit, float maxDist) {
     float t = 0.0;
     float d = 1.0;
-    for (int i = 0; i < 500; ++i) {
+    for (int i = 0; i < 5000; ++i) {
         if (d < 0.001) return t;
         if (t > maxDist) break;
         pHit = ro + rd * t;
-        //d = min(sceneSDF(pHit),1.0);
-        
-        d = min(sceneSDF(pHit),1.0);
-        // if (d > 5e5){
-        //     return 1e6;
-        // }
-        t += d;
-        
-        //if (d > 1.0) d = 1.0;
-        
+
+        d = sceneSDF(pHit);
+        t += min(d,length(pHit)*.1);
     }
 
     return -1.0;

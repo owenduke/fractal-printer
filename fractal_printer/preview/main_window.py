@@ -6,6 +6,25 @@ from fractal_printer.preview.controls_panel import ControlsPanel
 import pyperclip
 import json
 
+DEFAULT_SETTINGS = {
+    "coefficients": [
+        [-0.381, 0.625, 0.794, 0],
+        [0,0,0,0],
+        [1.0,0,0,0],
+        [0,0,0,0],
+        [0,0,0,0],
+        [0,0,0,0],
+        [0,0,0,0],
+        [0,0,0,0],
+        [0,0,0,0]
+    ],
+    "power": 2,
+    "slice": 0.02100000000000013,
+    "offset": 0.01,
+    "iterations": 10,
+    "bailout": 100
+}
+
 class MainWindow(QMainWindow):
     viewportResized = pyqtSignal(int, int)
     def __init__(self):
@@ -27,27 +46,14 @@ class MainWindow(QMainWindow):
         # Connect viewport resize signal
         self.viewportResized.connect(self.gl_widget.resizeGL)
 
-        # Container panel for controlls
+        # Container panel for controls
         self.sidebar = QFrame()
         sidebar_layout = QVBoxLayout()
         self.sidebar.setLayout(sidebar_layout)
         layout.addWidget(self.sidebar, stretch=0)
 
         # Shader options
-        controls_dict = {
-            'power': {"min": 2, "max": 5, "step" : 1, "default" : 2},
-            'cx': {'min': -2.0, 'max': 2.0, 'step': 0.01, 'default': 0.0},
-            'cy': {'min': -2.0, 'max': 2.0, 'step': 0.01, 'default': 0.0},
-            'cz': {'min': -2.0, 'max': 2.0, 'step': 0.01, 'default': 0.0},
-            'cw': {'min': -2.0, 'max': 2.0, 'step': 0.01, 'default': 0.0},
-            'slice': {'min': -2.0, 'max': 2.0, 'step': 0.01, 'default': 0.0},
-            'cx': {'min': -2.0, 'max': 2.0, 'step': 0.01, 'default': 0.0},
-            'offset': {'min': 0.0, 'max': 0.1, 'step': 0.001, 'default': 0.01},
-            'iterations': {'min': 1, 'max' : 30, 'step' : 1, 'default' : 15},
-            'bailout' : {'min' : 5, 'max' : 1000, 'step' : 1, 'default' : 100}
-        }
-
-        self.controls_panel = ControlsPanel(controls_dict)
+        self.controls_panel = ControlsPanel()
         self.controls_panel.controlsChanged.connect(self.gl_widget.updateControls)
         self.gl_widget.updateControls(self.controls_panel.get_controls())
         self.controls_panel.setMinimumWidth(300)
@@ -71,6 +77,9 @@ class MainWindow(QMainWindow):
         self.bottom_layout.addWidget(self.copy_btn)
         self.bottom_layout.addWidget(self.paste_btn)
 
+        # Put in the default values
+        self.controls_panel.set_controls(DEFAULT_SETTINGS)
+        
         # Call the resize handler to initialize the viewport
         print("Calling the resize event")
         self.resizeEvent(None)
