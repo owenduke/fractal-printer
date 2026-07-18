@@ -237,7 +237,7 @@ def show_slice(*args, **kwargs):
     a, extent, axes = sample_slice(*args, **kwargs)
     if show_abs:
         a = np.abs(a)
-    im = plt.imshow(a, extent=extent, origin='lower')
+    im = plt.imshow(a, extent=extent, origin='lower')#,cmap="seismic",vmin=-np.max(np.abs(a)),vmax=np.max(np.abs(a)))
     plt.xlabel(axes[0])
     plt.ylabel(axes[1])
     plt.colorbar(im)

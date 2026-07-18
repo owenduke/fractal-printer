@@ -19,7 +19,7 @@ class ModernGLWidget(QOpenGLWidget):
         self.vbo = None
         self.vao = None
         self.mouse_pos = (0, 0)
-        self.camera = {'theta': 0.0, 'phi': np.pi / 2, 'distance': 5.0}
+        self.camera = {'theta': np.pi/8, 'phi': np.pi / 3, 'distance': 3.0}
         self.controls = {}
         self._shader_error_shown = False
 
@@ -61,6 +61,7 @@ class ModernGLWidget(QOpenGLWidget):
             vertex_shader=vert_shader,
             fragment_shader=frag_shader
         )
+
         print(self.ctx.error)
         # Check for errors
         # if not glGetShaderiv(shader, GL_COMPILE_STATUS):
