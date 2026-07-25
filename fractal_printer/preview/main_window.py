@@ -25,7 +25,7 @@ DEFAULT_SETTINGS = {
     "slice": 0.02100000000000013,
     "offset": 0.01,
     "iterations": 10,
-    "bailout": 100
+    "bailout": 10000
 }
 
 def _format_settings(settings):
@@ -147,7 +147,7 @@ class MainWindow(QMainWindow):
         self.controls_panel.set_controls(json.loads(data_string))
 
     def on_randomize_settings(self):
-        settings = json.loads(json.dumps(DEFAULT_SETTINGS))
+        settings = json.loads(json.dumps(self.controls_panel.get_controls()))
 
         settings["coefficients"] = [
             [round(random.uniform(-1, 1), 3) for _ in range(4)] if n <= RANDOM_ORDER else [0, 0, 0, 0]

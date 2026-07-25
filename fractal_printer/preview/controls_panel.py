@@ -126,6 +126,7 @@ class QuaternionSelector(QWidget):
     def clear(self):
         for n in self.controls:
             self.controls[n].reset()
+        self.update_value()
 
 
 class ControlsPanel(QScrollArea):
@@ -146,8 +147,8 @@ class ControlsPanel(QScrollArea):
         # Add the other controls
         self.controls = {
             "slice"      : CoupledBox("Slice"),
-            "offset"     : CoupledBox("Offset", min=0.001, max = 0.5, step = 0.001, default = 0.01),
-            "iterations" : CoupledBox("Iterations", min=1, max = 100, step = 1, default = 10),
+            "offset"     : CoupledBox("Offset", min=0.0001, max = 0.01, step = 0.0001, default = 0.005),
+            "iterations" : CoupledBox("Iterations", min=1, max = 20, step = 1, default = 10),
             "bailout"    : CoupledBox("Bailout", min = 1, max = 100000, step = 1, default = 100)
         }
 

@@ -22,6 +22,7 @@ def generate_mesh(sdf, samples = 2**24, bounds = box_bounds(), simplify = None, 
     points = sdf.generate(bounds = bounds, samples = samples)
 
     # Convert to meshio Mesh
+    print("Converting mesh...")
     mesh = _mesh(points)
 
     # Optionally simplify
