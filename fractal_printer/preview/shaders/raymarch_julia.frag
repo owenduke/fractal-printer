@@ -66,11 +66,11 @@ float juliaSDF(vec3 p, vec4 c[9], float slice, int power, int iterations, int ba
             if (n==0){
                 z_ = z_ + c[n];
             } else if (n == 1){
-                z_ = z_ + qmul(c[n], z);
+                z_ = z_ + qmul(z, c[n]);
                 zp_ = zp_ + c[n];
             } else {
-                z_ = z_ + qmul(c[n], qpow(z, n));
-                zp_ = zp_ + n * qmul(c[n], qpow(z, n-1));
+                z_ = z_ + qmul(qpow(z, n), c[n]);
+                zp_ = zp_ + qmul(qpow(z, n-1), c[n]) * float(n);
             }
         }
 
@@ -78,16 +78,16 @@ float juliaSDF(vec3 p, vec4 c[9], float slice, int power, int iterations, int ba
         zp = qmul(zp_, zp);
 
         z2 = dot(z,z);
-        
+
         //if (zp2 > 1e20) break;
-        if (z2 > bailout * bailout) {
+        if (z2 > float(bailout)) {
             break;
         }
     }
 
     zp2 = dot(zp, zp);
     float dist = sqrt(z2/zp2) * log(z2) / (float(power) * 2.0) ;
-    return dist - (offset-0.001);
+    return dist - offset;
 }
 
 // Scene SDF
