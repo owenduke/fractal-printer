@@ -80,7 +80,7 @@ float juliaSDF(vec3 p, vec4 c[9], float slice, int power, int iterations, int ba
         z2 = dot(z,z);
 
         //if (zp2 > 1e20) break;
-        if (z2 > float(bailout)) {
+        if (z2 > float(100000)) {
             break;
         }
     }

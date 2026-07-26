@@ -2,7 +2,7 @@ from fractal_printer import fractal_sdfs as df
 import quaternion as qu
 import matplotlib.pyplot as plt
 import numpy as np
-from sdf.sdf.d3 import sphere, torus, slab
+from sdf.d3 import sphere, torus, slab
 from importlib import reload
 
 
