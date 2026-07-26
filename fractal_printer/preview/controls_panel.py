@@ -6,6 +6,7 @@ class CoupledBox(QWidget):
     value_changed = pyqtSignal(float)
     def __init__(self, name: str, parent = None, max = 1, min = -1, step = 0.001, default = 0):
         super().__init__(parent)
+
         self.setLayout(QHBoxLayout())
         self.layout().setContentsMargins(0, 0, 0, 0)
 
@@ -32,12 +33,14 @@ class CoupledBox(QWidget):
 
         # Connect slider and lineedit
         self.slider.valueChanged.connect(self.update_value)
-        self.lineedit.editingFinished.connect(self.update_value)
+        self.lineedit.editingFinished.connect(lambda: self.update_value(new_state = self.lineedit.text()))
 
     def update_value(self, new_state = None):
+
         if isinstance(new_state, str):
             # Change is coming from the text box
             try:
+
                 value = float(new_state)
             except ValueError:
                 value = self.value
@@ -148,8 +151,7 @@ class ControlsPanel(QScrollArea):
         self.controls = {
             "slice"      : CoupledBox("Slice"),
             "offset"     : CoupledBox("Offset", min=0.0001, max = 0.01, step = 0.0001, default = 0.005),
-            "iterations" : CoupledBox("Iterations", min=1, max = 20, step = 1, default = 10),
-            "bailout"    : CoupledBox("Bailout", min = 1, max = 100000, step = 1, default = 100)
+            "iterations" : CoupledBox("Iterations", min=1, max = 20, step = 1, default = 10)
         }
 
         for c in self.coeffs:
