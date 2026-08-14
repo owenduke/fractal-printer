@@ -2,12 +2,28 @@
 import numpy as np
 import meshio
 from sdf import core as sdf_core
+from sdf.d3 import sdf3
 from sdf.core import _mesh
 import fast_simplification
+from pathlib import Path
 
+def simplify_mesh(input_mesh: meshio.Mesh, reduction_factor = 0.9, aggression = 2, lossless = False) -> meshio.Mesh:
+    """
+    Wrapper for the fast_simplification module to use meshio.Mesh objects for input and output. 
+    See fast_simplification docs for details on the effect of arguments. 
 
+    Args:
+        input_mesh (meshio.Mesh): Starting mesh. 
+        reduction_factor (float, optional): How much we want to reduce the triangle count by. Defaults to 0.9.
+        aggression (int, optional): Determines how large an angle can be between two faces before merging is blocked.
+            Higher values result in more reduction at the cost of loss of detail. Defaults to 2.
+        lossless (bool, optional): Whether to do lossless simplification. If true, overrides the other parameters
+            and only simplifies the mesh where doing so doesn't change the geometry at all (for instance, if the 
+            mesh elements all lie in a plane). Defaults to False.
 
-def simplify_mesh(input_mesh, reduction_factor=0.9, target_count = None, aggression = 2, lossless = False):
+    Returns:
+        meshio.Mesh: Simplified mesh. 
+    """
     points, faces = fast_simplification.simplify(
         points = input_mesh.points, 
         triangles = input_mesh.cells[0].data,
@@ -17,14 +33,29 @@ def simplify_mesh(input_mesh, reduction_factor=0.9, target_count = None, aggress
     )
     return meshio.Mesh(points, cells={"triangle": faces})
 
-def box_bounds(size = 2.8):
+def box_bounds(size:float = 2.8) -> tuple:
+    """
+    Helper function to generate a cube-shaped bounding box centered on the origin. 
+
+    Args:
+        size (float, optional): Size of the box. Defaults to 2.8.
+
+    Returns:
+        tuple: ((-size/2,size/2)*3) coordinates of the box edges. 
+    """
     return ((-size/2,)*3,(size/2,)*3)
 
+def _bisect_edges(sdf: sdf3, points: np.ndarray, origin: list, step: float, 
+                  tol=1e-8, recursion_levels=30, bracket_tol=1e-3, verbose=True) -> np.ndarray:
+    """
+    Bisect marching-cubes vertices against the SDF, stopping each point as soon as its
+    value converges OR its bracket has shrunk well below one grid cell. 
+    Based on (QUIJIBO-style).
 
+    Returns:
+        _type_: _description_
+    """
 
-def _bisect_edges(sdf, points, origin, step, tol=1e-8, recursion_levels=30, bracket_tol=1e-3, verbose=True):
-    """Bisect marching-cubes vertices against the SDF, stopping each point as soon as its
-    value converges OR its bracket has shrunk well below one grid cell (QUIJIBO-style)."""
     points = np.asarray(points, dtype=float)
     n = len(points)
     if n == 0:
@@ -77,9 +108,6 @@ def _bisect_edges(sdf, points, origin, step, tol=1e-8, recursion_levels=30, brac
         if verbose:
             print(f'\tLevel {_}: {len(idx)} active edges')
 
-        # A bracket already narrower than sub-grid precision needs no further
-        # (expensive) SDF call -- this is what caps the cost of cusp points that
-        # never satisfy the value tolerance, instead of burning recursion_levels.
         width = np.linalg.norm(pos[idx] - neg[idx], axis=1)
         tight = width < spatial_tol
         result[idx[tight]] = (pos[idx[tight]] + neg[idx[tight]]) / 2
@@ -102,66 +130,74 @@ def _bisect_edges(sdf, points, origin, step, tol=1e-8, recursion_levels=30, brac
 
     return result
 
+def generate_mesh(sdf: sdf3, samples: int = 2**24, bounds: tuple=box_bounds(), recursion_levels: int =30,
+                             tol: float = 1e-8, bracket_tol: float =1e-3,
+                             simplify: float = None, save_path: str | Path =None, verbose: bool = True) -> meshio.Mesh:
+    """
+    Generate a mesh from an sdf object
 
-def generate_bisecting(sdf, samples=2**24, bounds=box_bounds(), recursion_levels=30,
-                        tol=1e-8, bracket_tol=1e-3, batch_workers=1, verbose=True):
+    Args:
+        sdf (sdf3): sdf.dn.sdf3 object defining the mesh. 
+        samples (int, optional): Number of samples to use for computation. Defaults to 2**24.
+        bounds (tuple, optional): Bounds of the region over which to compute the mesh 
+            (e.g., ((x_min,x_max),(y_min,y_max),...)). Defaults to box_bounds().
+        recursion_levels (int, optional): Number of bisections to do. Defaults to 30.
+        tol (float, optional): Bisection tolerance (distance from true surface). Defaults to 1e-8.
+        bracket_tol (float, optional): Bisection tolerance (length of search window). Defaults to 1e-3.
+        simplify (float, optional): How much to simplify the resulting mesh. Defaults to None.
+        save_path (str | Path, optional): If specified, location at which to save the resultant mesh. Can be
+            any format supported by the meshio module (.ply, .stl, ...). Defaults to None.
+        verbose (bool, optional): Whether to output progress messages. Defaults to True.
+
+    Returns:
+        meshio.Mesh representing the computed shape. 
+    """
+
+    # Estimate the volume to mesh over. This is spotty for fractal meshes--specify the bounds manually where possible. 
     if bounds is None:
         bounds = sdf_core._estimate_bounds(sdf)
+
+    # Calculate the grid step explicitly so we can bisect later 
     (x0, y0, z0), (x1, y1, z1) = bounds
     volume = (x1 - x0) * (y1 - y0) * (z1 - z0)
     step = (volume / samples) ** (1 / 3)
 
-    # step is passed explicitly (rather than samples) so we know the exact grid
-    # spacing used, needed to locate each vertex's edge for bisection below.
-    # batch_workers defaults to 1 (no thread-based batch dispatch): a numba
-    # sdf3 (e.g. polynomial_julia_sdf) already parallelizes internally via
-    # prange across all cores, so an outer ThreadPool here would just contend
-    # with that instead of adding anything. Raise it only for a plain,
-    # single-threaded sdf where overlapping batches might still help.
-    raw_points = np.asarray(
-        sdf_core.generate(sdf, step=step, bounds=bounds, workers=batch_workers, verbose=verbose),
-        dtype=float,
-    )
+    # Use the builtin sdf module marching cubes implementation to generate the approximate mesh.
+    # Use one worker to avoid conflicting with numba parallelism.  
+    raw_points = np.asarray( 
+        sdf_core.generate(sdf, step=step, bounds=bounds, workers=1, verbose=verbose),
+        dtype=float
+    ) 
 
-    # A closed mesh's raw triangle soup repeats each vertex ~6x (once per
-    # incident triangle); dedup before bisecting so each distinct edge crossing
-    # is refined once instead of redundantly for every triangle sharing it.
+    # A closed mesh's raw triangle soup repeats each vertex ~6x (once per 
+    # incident triangle); dedup before bisecting so each distinct edge crossing 
+    # is refined once instead of redundantly for every triangle sharing it. 
     unique_points, inverse = np.unique(raw_points, axis=0, return_inverse=True)
 
     if verbose:
         print(f'Bisecting {len(unique_points)} unique edge crossings '
-              f'(deduped from {len(raw_points)}, up to {recursion_levels} levels, tol={tol})...')
+                f'(deduped from {len(raw_points)}, up to {recursion_levels} levels, tol={tol})...')
         
     if recursion_levels > 0:
         refined = _bisect_edges(sdf, unique_points, origin=(x0, y0, z0), step=step, tol=tol,
                                 recursion_levels=recursion_levels, bracket_tol=bracket_tol, verbose=verbose)
-        return refined[inverse]
+        points = refined[inverse]
     else:
-        return unique_points[inverse]
+        points = unique_points[inverse]
 
-
-def generate_mesh(sdf, samples=2**24, bounds=box_bounds(), recursion_levels=30,
-                             tol=1e-8, bracket_tol=1e-3, batch_workers=1,
-                             simplify=None, save_path=None, verbose=True):
-
-    # Generate the point list, refining edge crossings against the true SDF
-    # instead of trusting marching cubes' linear interpolation between samples.
-    points = generate_bisecting(sdf, samples=samples, bounds=bounds, recursion_levels=recursion_levels,
-                                 tol=tol, bracket_tol=bracket_tol, batch_workers=batch_workers, verbose=verbose)
-
-    # Convert to meshio Mesh
-    print("Converting mesh...")
+    # Convert to meshio Mesh 
+    print("Converting mesh...") 
     mesh = _mesh(points)
 
-    # Optionally simplify
+    # Optionally simplify 
     if simplify is not None:
-        print(f"Simplifying mesh by {simplify}x ...")
-        mesh = simplify_mesh(mesh, reduction_factor=simplify)
+        print(f"Simplifying mesh by {simplify}x ...") 
+        mesh = simplify_mesh(mesh, reduction_factor=simplify) 
 
     # Optionally save
     if save_path is not None:
         print(f"Saving mesh to {save_path}...")
-        mesh.write(save_path)
+        mesh.write(save_path) 
 
     return mesh
 
