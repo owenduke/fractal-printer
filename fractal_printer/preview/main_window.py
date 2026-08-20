@@ -138,11 +138,13 @@ class MainWindow(QMainWindow):
 
     def on_copy_settings(self):
         data_string = _format_settings(self.controls_panel.get_controls())
+        print("Copied Settings:")
         print(data_string)
         pyperclip.copy(data_string)
 
     def on_paste_settings(self):
         data_string = pyperclip.paste()
+        print("Pasted Settings:")
         print(data_string)
         self.controls_panel.set_controls(json.loads(data_string))
 

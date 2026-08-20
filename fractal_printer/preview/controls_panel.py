@@ -1,6 +1,7 @@
 import json
 from PyQt6.QtWidgets import QScrollArea, QWidget, QVBoxLayout, QFormLayout, QSlider, QLineEdit, QHBoxLayout, QLabel, QGroupBox, QGridLayout, QCheckBox, QPushButton
 from PyQt6.QtCore import pyqtSignal, Qt, QSize
+from PyQt6.QtGui import QDoubleValidator
 
 class CoupledBox(QWidget):
     value_changed = pyqtSignal(float)
@@ -30,36 +31,21 @@ class CoupledBox(QWidget):
         self.layout().addWidget(self.lineedit)
         self.lineedit.setFixedWidth(100)
         self.lineedit.setText(f"{default:.3f}")
+        self.lineedit.setValidator(QDoubleValidator(min, max, 3, notation= QDoubleValidator.Notation.StandardNotation))
 
         # Connect slider and lineedit
-        self.slider.valueChanged.connect(self.update_value)
-        self.lineedit.editingFinished.connect(lambda: self.update_value(new_state = self.lineedit.text()))
+        self.slider.valueChanged.connect(lambda: self.update_value(value = self.slider.value()*step + min))
+        self.lineedit.editingFinished.connect(lambda: self.update_value(value = float(self.lineedit.text())))
 
-    def update_value(self, new_state = None):
-
-        if isinstance(new_state, str):
-            # Change is coming from the text box
-            try:
-
-                value = float(new_state)
-            except ValueError:
-                value = self.value
-        elif isinstance(new_state, int):
-            # Change is coming from the slider
-            value = self.min + new_state * self.step
-        elif new_state is None:
-            value = self.value
-
+    def update_value(self, value, silent = False):
+        self.value = value
         self.lineedit.setText(f"{value:.3f}")
         self.slider.setValue(int((value - self.min)/self.step))
-
-        if self.value != value:
-            self.value = value
-            self.value_changed.emit(value)
+        if not silent:
+            self.value_changed.emit(self.value)
     
     def reset(self):
-        self.value = self.default
-        self.update_value()
+        self.update_value(self.default, silent=True)
 
     def toggle(self, state):
         self.setVisible(state)
@@ -82,7 +68,6 @@ class QuaternionSelector(QWidget):
         self.layout().setVerticalSpacing(2)
         self.layout().setContentsMargins(4, 4, 4, 4)
 
-
         titlebox = QHBoxLayout()
 
         namelabel = QLabel(name)
@@ -102,23 +87,22 @@ class QuaternionSelector(QWidget):
         self.layout().addRow(titlebox)
 
         self.controls = {}
-        self.value = [0]*4
         for axis in ["x","y","z","w"]:
             c = CoupledBox(axis, parent = self)
-            c.value_changed.connect(self.update_value)
+            c.value_changed.connect(lambda: self.value_changed.emit(self.components))
             self.controls[axis] = c
             self.layout().addRow(c)
-            
-    def update_value(self):
-        for i, n in enumerate(self.controls):
-            self.value[i] = self.controls[n].value
-        self.value_changed.emit(self.value)
 
-    def set_value(self, value):
-        self.value = value
+    @property
+    def components(self):
+        "Components of the quaterion, as a 4-element list."
+        return [self.controls[name].value for name in self.controls]
+
+    @components.setter
+    def components(self, value):
         for i, n in enumerate(self.controls):
-            self.controls[n].value = value[i]
-            self.controls[n].update_value()
+            #print(f"Updating {self.name}:{n} to {value[i]}")
+            self.controls[n].update_value(value[i], silent=True)
         
     def toggle(self):
         state = self.enabledbox.isChecked()
@@ -156,17 +140,17 @@ class ControlsPanel(QScrollArea):
 
         for c in self.coeffs:
             self.layout.addRow(c)
-            c.value_changed.connect(self.update_controls)
+            c.value_changed.connect(self.refresh_settings)
             c.enabledbox.setChecked(False)
             c.toggle()
 
         for name, c in self.controls.items():
             self.layout.addRow(c)
-            c.value_changed.connect(self.update_controls)
+            c.value_changed.connect(self.refresh_settings)
         
-        self.update_controls()
+        self.refresh_settings()
 
-    def update_controls(self):
+    def refresh_settings(self):
         settings = {}
         power = 0
         coefficients = []
@@ -174,7 +158,7 @@ class ControlsPanel(QScrollArea):
             if c.enabledbox.isChecked():
                 if power < n:
                     power = n
-                coefficients.append(c.value)
+                coefficients.append(c.components)
             else:
                 coefficients.append([0]*4)
 
@@ -191,15 +175,18 @@ class ControlsPanel(QScrollArea):
         return self.settings
     
     def set_controls(self, settings):
+        print("Setting controls")
         for i, c in enumerate(settings["coefficients"]):
-            self.coeffs[i].set_value(c)
+            self.coeffs[i].components = c
             self.coeffs[i].enabledbox.setChecked(any(c))
             self.coeffs[i].toggle()
 
         for name, control in self.controls.items():
             try:
-                control.value = settings[name]
-                control.update_value()
+                control.update_value(settings[name], silent=True)
             except KeyError:
                 pass
+
+        self.refresh_settings()
+
 

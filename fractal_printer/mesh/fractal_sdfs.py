@@ -29,10 +29,10 @@ def mag2(z):
     return quaternion.as_float_array(z * z.conj())[...,0]
 
 @d3.sdf3
-def general_julia_sdf(update: function, 
+def general_julia_sdf(update, 
                       slice: float = 0, power: int = 2, 
                       iterations: int = 50, bailout: float = 10000**2, offset = 0, 
-                      interior_epsilon: float = 1e-3, fudge_factor: float = 0.9) -> function:
+                      interior_epsilon: float = 1e-3, fudge_factor: float = 0.9):
     """
     Generate sdf3 object for a Julia set defined by a generic update map.
 
@@ -200,7 +200,7 @@ def _polynomial_julia_kernel(points: np.ndarray, coeffs: np.ndarray, slice_w: fl
 @d3.sdf3
 def polynomial_julia_sdf(coefficients: np.ndarray,
                         slice: float = 0, power: int = 2, iterations: int = 50, bailout: float = 10000**2,
-                        offset=0, interior_epsilon = 1e-3, fudge_factor = 0.9) -> function:
+                        offset=0, interior_epsilon = 1e-3, fudge_factor = 0.9):
     """
     Implements approximate distance function for a Julia set with a polynomial update function
 
