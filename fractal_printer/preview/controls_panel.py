@@ -164,6 +164,7 @@ class ControlsPanel(QScrollArea):
 
         settings["coefficients"] = coefficients
         settings["power"] = power
+        settings["bailout"] = 10000
 
         for name, control in self.controls.items():
             settings[name] = control.value

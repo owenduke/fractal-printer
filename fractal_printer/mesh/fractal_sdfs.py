@@ -105,23 +105,25 @@ def general_julia_sdf(update,
 # and can no longer use an arbitrary function for the update rule. 
 
 @njit(inline='always')
-def _qmul(w1, x1, y1, z1, w2, x2, y2, z2):
+def _qmul(ax, ay, az, aw, bx, by, bz, bw):
     """
     Qaternion multiplication based on floats. 
     Be careful! Quaternion multiplication is non-commutative. 
 
     Args:
-        w1...z1 (float): Components of quaternion 1
-        x2...z2 (float): Components of quaternion 2
+        ax...aw (float): Components of quaternion 1
+        bx...bw (float): Components of quaternion 2
 
     Returns:
         w...z: Components of product.
     """
-    w = w1*w2 - x1*x2 - y1*y2 - z1*z2
-    x = w1*x2 + x1*w2 + y1*z2 - z1*y2
-    y = w1*y2 - x1*z2 + y1*w2 + z1*x2
-    z = w1*z2 + x1*y2 - y1*x2 + z1*w2
-    return w, x, y, z
+
+    x = ax*bx - ay*by - az*bz - aw*bw
+    y = ax*by + ay*bx + az*bw - aw*bz
+    z = ax*bz + az*bx + aw*by - ay*bw
+    w = ax*bw + aw*bx + ay*bz - az*by
+
+    return x, y, z, w
 
 @njit(parallel=True, cache=True)
 def _polynomial_julia_kernel(points: np.ndarray, coeffs: np.ndarray, slice_w: float, power: int, iterations: int, bailout: float,
@@ -154,8 +156,8 @@ def _polynomial_julia_kernel(points: np.ndarray, coeffs: np.ndarray, slice_w: fl
     for i in prange(points.shape[0]):
 
         # Compute the coordinates of the point in 4D.
-        zw = points[i, 0]; zx = points[i, 1]; zy = points[i, 2]; zz = slice_w
-        zpw = 1.0; zpx = 0.0; zpy = 0.0; zpz = 0.0  # running derivative, starts at the identity
+        z_x = points[i, 0]; z_y = points[i, 1]; z_z = points[i, 2]; z_w = slice_w
+        zp_x = 1.0; zp_y = 0.0; zp_z = 0.0; zp_w = 0.0  # running derivative, starts at the identity
         escaped = False 
         z2 = 0.0 # Running squared-magnitude of point. 
 
@@ -163,36 +165,37 @@ def _polynomial_julia_kernel(points: np.ndarray, coeffs: np.ndarray, slice_w: fl
             # Evaluate the polynomial and its derivative at the current z via
             # an incrementally-tracked running power, instead of recomputing
             # z**i from scratch per term.
-            pow_w = 1.0; pow_x = 0.0; pow_y = 0.0; pow_z = 0.0
-            prev_w = 0.0; prev_x = 0.0; prev_y = 0.0; prev_z = 0.0
-            z1w = 0.0; z1x = 0.0; z1y = 0.0; z1z = 0.0
-            zp1w = 0.0; zp1x = 0.0; zp1y = 0.0; zp1z = 0.0
+            pow_x = 1.0; pow_y = 0.0; pow_z = 0.0; pow_w = 0.0
+            prev_x = 0.0; prev_y = 0.0; prev_z = 0.0; prev_w = 0.0
+            z1_x = 0.0; z1_y = 0.0; z1_z = 0.0; z1_w = 0.0
+            zp1_x = 0.0; zp1_y = 0.0; zp1_z = 0.0; zp1_w = 0.0
 
             for t in range(n_terms):
-                cw = coeffs[t, 0]; cx = coeffs[t, 1]; cy = coeffs[t, 2]; cz = coeffs[t, 3]
-                mw, mx, my, mz = _qmul(pow_w, pow_x, pow_y, pow_z, cw, cx, cy, cz)
-                z1w += mw; z1x += mx; z1y += my; z1z += mz
+                c_x = coeffs[t, 0]; c_y = coeffs[t, 1]; c_z = coeffs[t, 2]; c_w = coeffs[t, 3]
+                m_x, m_y, m_z, m_w = _qmul(pow_x, pow_y, pow_z, pow_w, c_x, c_y, c_z, c_w)
+                z1_x += m_x; z1_y += m_y; z1_z += m_z; z1_w += m_w
                 if t >= 1:
-                    dw, dx, dy, dz = _qmul(prev_w, prev_x, prev_y, prev_z, cw, cx, cy, cz)
-                    zp1w += t*dw; zp1x += t*dx; zp1y += t*dy; zp1z += t*dz
-                prev_w, prev_x, prev_y, prev_z = pow_w, pow_x, pow_y, pow_z
+                    d_x, d_y, d_z, d_w = _qmul(prev_x, prev_y, prev_z, prev_w, c_x, c_y, c_z, c_w)
+                    zp1_x += t*d_x; zp1_y += t*d_y; zp1_z += t*d_z; zp1_w += t*d_w
+                prev_x, prev_y, prev_z, prev_w = pow_x, pow_y, pow_z, pow_w
                 if t < n_terms - 1:
-                    pow_w, pow_x, pow_y, pow_z = _qmul(pow_w, pow_x, pow_y, pow_z, zw, zx, zy, zz)
+                    pow_x, pow_y, pow_z, pow_w = _qmul(pow_x, pow_y, pow_z, pow_w, z_x, z_y, z_z, z_w)
 
-            zpw, zpx, zpy, zpz = _qmul(zp1w, zp1x, zp1y, zp1z, zpw, zpx, zpy, zpz)
-            zw, zx, zy, zz = z1w, z1x, z1y, z1z
-            z2 = zw*zw + zx*zx + zy*zy + zz*zz
+            zp_x, zp_y, zp_z, zp_w = _qmul(zp1_x, zp1_y, zp1_z, zp1_w, zp_x, zp_y, zp_z, zp_w)
+            z_x, z_y, z_z, z_w = z1_x, z1_y, z1_z, z1_w
+            z2 = z_x*z_x + z_y*z_y + z_z*z_z + z_w*z_w
             if z2 > bailout:
                 escaped = True
                 break
 
-        if escaped:
-            zp2 = zpw*zpw + zpx*zpx + zpy*zpy + zpz*zpz
-            if zp2 < 1e-6:
-                zp2 = 1e-6
-            dist = np.sqrt(z2/zp2) * np.log(z2) / (2*power)
-        else:
+        zp2 = zp_x*zp_x + zp_y*zp_y + zp_z*zp_z + zp_w*zp_w
+        if zp2 < 1e-6:
+            zp2 = 1e-6
+        dist = np.sqrt(z2/zp2) * np.log(z2) / (2*power)
+
+        if dist < interior_epsilon:
             dist = interior_epsilon
+
 
         out[i] = (dist - offset) * fudge_factor
 

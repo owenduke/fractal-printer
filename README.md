@@ -1,8 +1,8 @@
 # Overview
 
-JuliaSDF is a set of python tools for generating 3D-printable art based on quaternionic Julia sets. Here are a few examples of what this can look like:
+JuliaSDF is a set of python tools for generating 3D-printable art based on quaternionic Julia sets. Here's an example of what this can look like:
 
-%TODO
+![truncated swirl example print](docs/images/truncated_swirl.png)
 
 The project has two main parts:
 1. A PyQT-based GUI tool for visulalizing polynomial quaternionic Julia sets for fast searching using your graphics card.
@@ -39,15 +39,42 @@ A [Julia set](https://en.wikipedia.org/wiki/Julia_set) is a class of fractal def
 $$ z_{n+1} = f(z_n) = p(z_n) / q(z_n)$$
 
 where $p$ and $q$ are polynomial functions. Colloqially the Julia set of $f$ is defined as the set of initial points $z_0$ for which $|z_n|$ does not diverge as $n\longrightarrow\infty$. The shapes in the complex plane of the points that satisfy this condition can be quite complex: the figure below is an illustration of their distribution for the relatively simple iteration function $f(z) = z^2 -0.5125 + 0.5231i$. The coloring is based on the number of iterations required before each point exceeds a specified magnitude. 
+
 ![example Julia set](docs/images/julia_set.png)
 
 There is an enormous body of research on these, both for math and for art, and this project just scrapes the surface of them. I'd recommend [this excellent video](https://www.youtube.com/watch?v=LqbZpur38nw) from 3Blue1Brown for a deeper dive into why such a simple rule can yeild such complex shapes.
 
-For rendering and meshing purposes we'd like to be able to compute the distance between a given point and the 'surface' of the Julia set. This seems like it should be extremely difficult, but there's a very neat trick developed to approximate it with little more computation than is required to do the iteration itself. For this I followed the very through work of [Inigo Quilez](https://iquilezles.org/articles/distancefractals/), who makes beautiful rendered images of these shapes. 
+For rendering and meshing purposes we'd like to be able to compute the distance between a given point and the 'surface' of the Julia set. This seems like it should be extremely difficult, but there's a very neat trick developed to approximate it with little more computation than is required to do the iteration itself. For this I followed the very through work of [Inigo Quilez](https://iquilezles.org/articles/distancefractals/), who makes beautiful rendered images of these shapes. The upshot is that near the border of a Julia set the distance to that border can be approximated as 
+
+$$ d(z_0) \approx \frac{|z_n|\cdot\log|z_n|}{|z'_n|} $$
+
+Here $z_n$ is the result of applying the map $n$ times, starting with $z_0$, and $z'_n$ is its derivative with respect to $z_0$, which we can find by applying the chain rule to the iterated map. This approximation gets better as $n$ increases, but the formula becomes numerically unstable as $z_n$ grows without bound for escaped points, so in practice we iterate until either $|z_n|$ exceeds some bailout threshold or we've reached a preset number of iterations. Here's what this function looks like for an example quadratic Julia set defined by the map $z_{n+1} = z_n^2 + (-0.693 + 0.286i)$. The plot on the left shows the resultant $d(z_0)$, with the $d=0$ contour highlighted in white. 
+
+![SDF Clipping](docs/images/inner_sdf_floor.png)
+
+Looks pretty good! Unfortunately we have an issue: the approximation diverges at a few places in the interior of the unconverged region. This isn't a problem for raymarched renderings, since the rays are always /outside/ the rendered shape, but for computing meshes this will cause issues. The most reliable fix I've found for this is to truncate $d$ at some small negative number. This is shown at right for a clipping value of -0.001.
+
+While the approximation is formally defined for large $n$, we can actually get interesting and useful results by using moderate iteration counts: fewer iterations generally means a smoother shape, which can be more aesthetically interesting than the true fractal surface. The images below show the same Julia set approximated with different iteration counts (shown in white on each plot).
+
+![iteration count effects](docs/images/iteration_count.png)
 
 ## Quaternions
 
 The last peice of background here is the [Quaternion](https://en.wikipedia.org/wiki/Quaternion), which an extension of the complex numbers (which live on a 2D plane, as visualized above) into 4D. They were developed by William Hamilton (better known for his contributions to classical mechanics) in 1843, after Hamilton had spent decades trying and failing to create a 3D analog of the complex numbers. They provide an alternative to vectors as a way to represent points in 3D or 4D space, and for some operations (rotations, for instance) they are easier to calculate with. 3Blue1Brown has [another excellent video](https://www.youtube.com/watch?v=d4EgbgTm0Bg) explaining and visualizing quaternion multiplication. For us, they provide a way to extend the 2D Julia sets into 3D! The objects created in this project are 3D slices of quaternionic/4D Julia sets. 
+
+A quaternion can be written as the sum of four components: a real part and three imaginary parts, denoted by multiplying by imaginary units $i$, $j$, and $k$:
+
+$$ q = a + bi + cj + dk $$
+
+Quaternion multiplication is accomplished with the following rules:
+
+$$ i^2 = j^2 = k^2 = ijk = -1 $$
+
+$$ ij = -ji = k, \hspace{1in} jk=-kj=i, \hspace{1in} ki=-ik=j $$
+
+Applying the distance approximation above to quaternions directly gives us a 4D extension of the Julia sets. The extension of the case above looks like this:
+
+![iteration count effects](docs/images/quaternionic_extension.png)
 
 # Usage
 
@@ -140,6 +167,9 @@ Once we have the `sdf` object, the `mesh_generation.generate_mesh` function turn
 See the docstring for `generate_mesh` for a full description of arguments and their effect. 
 
 The resulting meshes can be quite large (even with simplifying) and many 3D modeling programs will choke on them. I've found the least painful way to view them is to use the .ply format and the [MeshLab](https://www.meshlab.net/) application, and generate STLs for printing once I've finished tweaking the design.  MeshLab also has some features for manually cleaning up corrupted meshes. 
+
+## Printing
+The fine details and weird shapes generated in this way fit very well with SLA printing. All the examples shown here were printed on a Form 4 printer with standard black or white resin, using the finest resolution available and automatic supports, with a significant amount of post-processing (sanding, clear coating) to get the desired surface effect. For large models it's often best to print a hollow shell rather than a solid part, with suitable vent holes to avoid suction issues. There are ways to do this directly in the `sdf` module but since our SDFs are ill-behaved on the interior of our shapes I've found it's much more reliable to export solid volumes and do the hollowing manually in the slicer before printing.
 
 # Gallery
 

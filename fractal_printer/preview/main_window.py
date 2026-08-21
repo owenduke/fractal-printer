@@ -120,22 +120,6 @@ class MainWindow(QMainWindow):
             h = self.gl_widget.height()
             self.viewportResized.emit(w, h)
 
-    def on_generate_mesh(self):
-        self.progress.setVisible(True)
-        # Here, launch a process to print controls (stub for now)
-        import multiprocessing, time
-        controls = self.controls_panel.get_controls()
-        def dummy_mesh_job(ctrls):
-            print("[Dummy Mesh Process] Controls:", ctrls)
-            time.sleep(2)
-        p = multiprocessing.Process(target=dummy_mesh_job, args=(controls,))
-        p.start()
-        # Simulate done after a delay (in real app, use QProcess or signals)
-        from threading import Timer
-        def finish():
-            self.progress.setVisible(False)
-        Timer(2.2, finish).start()
-
     def on_copy_settings(self):
         data_string = _format_settings(self.controls_panel.get_controls())
         print("Copied Settings:")
