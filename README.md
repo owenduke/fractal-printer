@@ -39,7 +39,6 @@ A [Julia set](https://en.wikipedia.org/wiki/Julia_set) is a class of fractal def
 $$ z_{n+1} = f(z_n) = p(z_n) / q(z_n)$$
 
 where $p$ and $q$ are polynomial functions. Colloqially the Julia set of $f$ is defined as the set of initial points $z_0$ for which $|z_n|$ does not diverge as $n\longrightarrow\infty$. The shapes in the complex plane of the points that satisfy this condition can be quite complex: the figure below is an illustration of their distribution for the relatively simple iteration function $f(z) = z^2 -0.5125 + 0.5231i$. The coloring is based on the number of iterations required before each point exceeds a specified magnitude. 
-
 ![example Julia set](docs/images/julia_set.png)
 
 There is an enormous body of research on these, both for math and for art, and this project just scrapes the surface of them. I'd recommend [this excellent video](https://www.youtube.com/watch?v=LqbZpur38nw) from 3Blue1Brown for a deeper dive into why such a simple rule can yeild such complex shapes.
