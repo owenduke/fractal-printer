@@ -115,7 +115,7 @@ vec3 getRayDir(vec2 uv, vec3 camPos) {
     vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), forward));
     vec3 up = cross(forward, right);
     float fov = 1.0;
-    vec3 ray = normalize(forward + (uv.x - 0.5) * right * fov + (uv.y - 0.5) * up * fov);
+    vec3 ray = normalize(forward + -(uv.x - 0.5) * right * fov + (uv.y - 0.5) * up * fov);
     return ray;
 }
 

@@ -104,7 +104,7 @@ class ModernGLWidget(QOpenGLWidget):
         dy = event.position().y() - self.mouse_pos[1]
         self.mouse_pos = (event.position().x(), event.position().y())
         self.camera['theta'] += dx * 0.01
-        self.camera['phi'] += dy * 0.01
+        self.camera['phi'] -= dy * 0.01
         self.camera['phi'] = np.clip(self.camera['phi'], 1e-6, np.pi-1e-6)
         self.cameraMoved.emit(self.camera['theta'], self.camera['phi'])
         self.update()

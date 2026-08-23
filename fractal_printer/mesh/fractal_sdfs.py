@@ -193,8 +193,8 @@ def _polynomial_julia_kernel(points: np.ndarray, coeffs: np.ndarray, slice_w: fl
             zp2 = 1e-6
         dist = np.sqrt(z2/zp2) * np.log(z2) / (2*power)
 
-        if dist < interior_epsilon:
-            dist = interior_epsilon
+        if dist < -interior_epsilon:
+            dist = -interior_epsilon
 
 
         out[i] = (dist - offset) * fudge_factor
