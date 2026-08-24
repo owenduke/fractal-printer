@@ -1,9 +1,6 @@
 docstring = """
 This file contains functions that define a 3D shape by the directed distance between them 
  and a given point.
-
-Each distance function must return the estimated distance to the surface as well
-as the gradient of the distance field (oriented outward) for fast dual contouring.
 """
 
 import threading
