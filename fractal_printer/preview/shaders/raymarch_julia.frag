@@ -12,6 +12,8 @@ uniform float offset;
 uniform vec3 camera; // theta, phi, distance
 uniform float aspect; // ratio of width to hight
 
+#define BAILOUT 1.0e6
+
 
 vec4 qmul(vec4 a, vec4 b) {
     return vec4(
@@ -80,7 +82,7 @@ float juliaSDF(vec3 p, vec4 c[9], float slice, int power, int iterations, int ba
         z2 = dot(z,z);
 
         //if (zp2 > 1e20) break;
-        if (z2 > float(bailout)) {
+        if (z2 > BAILOUT) {
             break;
         }
     }
@@ -137,7 +139,7 @@ float raymarch(vec3 ro, vec3 rd, out vec3 pHit, float maxDist) {
 
 // Normal estimation
 vec3 estimateNormal(vec3 p) {
-    float eps = 0.001;
+    float eps = 0.00001;
     //return normalize(p);
     return normalize(vec3(
         sceneSDF(p + vec3(eps, 0, 0)) - sceneSDF(p - vec3(eps, 0, 0)),
@@ -149,8 +151,8 @@ vec3 estimateNormal(vec3 p) {
 // Shade a surface point (diffuse + two lights + Blinn-Phong specular)
 vec3 shadeSurface(vec3 p, vec3 n, vec3 ro) {
     vec3 lightDir1 = normalize(vec3(1.0, 2.0, 1.0));
-    vec3 lightDir2 = normalize(vec3(-1.0, 1.0, 0.5));
-    vec3 baseColor = vec3(1.0, 0.8, 0.6);
+    vec3 lightDir2 = normalize(vec3(-1.0, -1.0, -0.5));
+    vec3 baseColor = vec3(0.3, 0.3, 0.3);
 
     float diff1 = max(dot(n, lightDir1), 0.0);
     float diff2 = max(dot(n, lightDir2), 0.0);
@@ -164,7 +166,7 @@ vec3 shadeSurface(vec3 p, vec3 n, vec3 ro) {
     float specular = spec1 * 0.8 + spec2 * 0.5;
 
     float ambient = 0.12;
-    vec3 col = baseColor * (ambient + diffuse) + vec3(1.0) * specular * 0.35;
+    vec3 col = baseColor * (ambient + diffuse) + vec3(1.0) * specular * 1.0;
     return col;
 }
 
@@ -226,6 +228,6 @@ void main() {
         vec3 color = mix(local * ao, reflColor, reflectivity);
         fragColor = vec4(color,1.0);
     } else {
-        fragColor = vec4(uv.x*0.1, uv.y*0.1, 0.15, 1.0);
+        fragColor = vec4(0.6+uv.x*0.1, 0.6+uv.y*0.1, 0.6, 1.0);
     }
 }

@@ -24,8 +24,7 @@ DEFAULT_SETTINGS = {
     "power": 2,
     "slice": 0.02100000000000013,
     "offset": 0.01,
-    "iterations": 10,
-    "bailout": 10000
+    "iterations": 10
 }
 
 def _format_settings(settings):
@@ -130,7 +129,13 @@ class MainWindow(QMainWindow):
         data_string = pyperclip.paste()
         print("Pasted Settings:")
         print(data_string)
-        self.controls_panel.set_controls(json.loads(data_string))
+        try:
+            data = json.loads(data_string)
+            self.controls_panel.set_controls(data)
+        except json.decoder.JSONDecodeError:
+            print("Problem translated pasted settings.")
+            print("Pasted data:")
+            print(data_string)
 
     def on_randomize_settings(self):
         settings = json.loads(json.dumps(self.controls_panel.get_controls()))

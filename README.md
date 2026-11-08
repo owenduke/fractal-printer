@@ -38,11 +38,11 @@ The [SDF](https://github.com/fogleman/sdf/blob/main/README.md) module provides a
 A [Julia set](https://en.wikipedia.org/wiki/Julia_set) is a class of fractal defined by an iterated map on the complex plane:
 $$ z_{n+1} = f(z_n) = p(z_n) / q(z_n)$$
 
-where $p$ and $q$ are polynomial functions. Colloqially the Julia set of $f$ is defined as the set of initial points $z_0$ for which $|z_n|$ does not diverge as $n\longrightarrow\infty$. The shapes in the complex plane of the points that satisfy this condition can be quite complex: the figure below is an illustration of their distribution for the relatively simple iteration function $f(z) = z^2 -0.5125 + 0.5231i$. The coloring is based on the number of iterations required before each point exceeds a specified magnitude. 
+where $p$ and $q$ are polynomial functions. Colloquially the Julia set of $f$ is defined as the set of initial points $z_0$ for which $|z_n|$ does not diverge as $n\longrightarrow\infty$. The shapes in the complex plane of the points that satisfy this condition can be quite complex: the figure below is an illustration of their distribution for the relatively simple iteration function $f(z) = z^2 -0.5125 + 0.5231i$. The coloring is based on the number of iterations required before each point exceeds a specified magnitude. 
 
 ![example Julia set](docs/images/julia_set.png)
 
-There is an enormous body of research on these, both for math and for art, and this project just scrapes the surface of them. I'd recommend [this excellent video](https://www.youtube.com/watch?v=LqbZpur38nw) from 3Blue1Brown for a deeper dive into why such a simple rule can yeild such complex shapes.
+There is an enormous body of research on these, both for math and for art, and this project just scrapes the surface of them. I'd recommend [this excellent video](https://www.youtube.com/watch?v=LqbZpur38nw) from 3Blue1Brown for a deeper dive into why such a simple rule can yield such complex shapes.
 
 For rendering and meshing purposes we'd like to be able to compute the distance between a given point and the 'surface' of the Julia set. This seems like it should be extremely difficult, but there's a very neat trick developed to approximate it with little more computation than is required to do the iteration itself. For this I followed the very through work of [Inigo Quilez](https://iquilezles.org/articles/distancefractals/), who makes beautiful rendered images of these shapes. The upshot is that near the border of a Julia set the distance to that border can be approximated as 
 

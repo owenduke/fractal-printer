@@ -28,7 +28,7 @@ def mag2(z):
 @d3.sdf3
 def general_julia_sdf(update, 
                       slice: float = 0, power: int = 2, 
-                      iterations: int = 50, bailout: float = 10000**2, offset = 0, 
+                      iterations: int = 50, bailout: float = 1e50, offset = 0, 
                       interior_epsilon: float = 1e-3, fudge_factor: float = 0.9):
     """
     Generate sdf3 object for a Julia set defined by a generic update map.
@@ -147,8 +147,7 @@ def _polynomial_julia_kernel(points: np.ndarray, coeffs: np.ndarray, slice_w: fl
         
     """
     
-    n_terms = coeffs.shape[0]
-
+    n_terms = power+1
     # njit gives us the vectorization advantages, so we'll just loop over the points. 
     for i in prange(points.shape[0]):
 
@@ -187,6 +186,7 @@ def _polynomial_julia_kernel(points: np.ndarray, coeffs: np.ndarray, slice_w: fl
 
         zp2 = zp_x*zp_x + zp_y*zp_y + zp_z*zp_z + zp_w*zp_w
         if zp2 < 1e-6:
+            print("Small derivative")
             zp2 = 1e-6
         dist = np.sqrt(z2/zp2) * np.log(z2) / (2*power)
 
