@@ -199,7 +199,7 @@ def _polynomial_julia_kernel(points: np.ndarray, coeffs: np.ndarray, slice_w: fl
 
 @d3.sdf3
 def polynomial_julia_sdf(coefficients: np.ndarray,
-                        slice: float = 0, power: int = 2, iterations: int = 50, bailout: float = 10000**2,
+                        slice: float = 0, power: int = 2, iterations: int = 50, bailout: float = 1e50,
                         offset=0, interior_epsilon = 1e-3, fudge_factor = 0.9):
     """
     Implements approximate distance function for a Julia set with a polynomial update function
