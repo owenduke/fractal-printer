@@ -5,11 +5,12 @@ from PyQt6.QtWidgets import QMessageBox, QPinchGesture
 import moderngl
 import numpy as np
 import os
+import quaternion
 
 
 class ModernGLWidget(QOpenGLWidget):
-    cameraMoved = pyqtSignal(float, float)
-    zoomChanged = pyqtSignal(float)
+    #cameraMoved = pyqtSignal(float, float)
+    #zoomChanged = pyqtSignal(float)
     controlsChanged = pyqtSignal(dict)
 
     def __init__(self, parent=None):
@@ -19,7 +20,8 @@ class ModernGLWidget(QOpenGLWidget):
         self.vbo = None
         self.vao = None
         self.mouse_pos = (0, 0)
-        self.camera = {'theta': np.pi/8, 'phi': np.pi / 3, 'distance': 3.0}
+        self.camera = quaternion.quaternion(0,3,0,0)
+        self.up     = quaternion.quaternion(0,0,0,1)
         self.controls = {}
         self._shader_error_shown = False
 
@@ -87,11 +89,8 @@ class ModernGLWidget(QOpenGLWidget):
             if key in self.prog:
                 self.prog[key].value = self.controls[key]
 
-        self.prog['camera'].value = tuple([
-            self.camera['theta'],
-            self.camera['phi'],
-            self.camera['distance']
-        ])
+        self.prog['camera'].value = self.camera.components[1:]
+        self.prog['up'].value = self.up.components[1:]
 
         self.prog['aspect'].value = self.ctx.viewport[2]/self.ctx.viewport[3]
 
@@ -103,10 +102,21 @@ class ModernGLWidget(QOpenGLWidget):
         dx = event.position().x() - self.mouse_pos[0]
         dy = event.position().y() - self.mouse_pos[1]
         self.mouse_pos = (event.position().x(), event.position().y())
-        self.camera['theta'] += dx * 0.01
-        self.camera['phi'] -= dy * 0.01
-        self.camera['phi'] = np.clip(self.camera['phi'], 1e-6, np.pi-1e-6)
-        self.cameraMoved.emit(self.camera['theta'], self.camera['phi'])
+
+        angle = -np.sqrt(dx**2 + dy**2) / 1e4
+        right = (self.up * self.camera - self.camera * self.up)
+        right = right / np.abs(right)
+        vector = self.up * dx + right * dy
+        rotation = np.cos(angle/2) * quaternion.quaternion(1,0,0,0) + np.sin(angle/2) * vector
+
+        self.camera = rotation * self.camera / rotation
+        self.up     = rotation * self.up / rotation
+
+        # Project up back onto the perpendicular plane and normalize
+        #print(np.dot(np.array(self.camera.components), np.array(self.up.components)), np.abs(self.up))
+
+
+        #self.cameraMoved.emit(self.camera)
         self.update()
 
     def mousePressEvent(self, event):
@@ -118,52 +128,12 @@ class ModernGLWidget(QOpenGLWidget):
             # angleDelta is preferred; fallback to pixelDelta
             ad = event.angleDelta()
             delta = ad.y() if not ad.isNull() else event.pixelDelta().y()
-            # One notch (120) -> change by 0.5 units
-            change = (delta / 120.0) * 0.5
-            new_dist = self.camera['distance'] - change
-            new_dist = max(1.0, min(20.0, new_dist))
-            if new_dist != self.camera['distance']:
-                self.camera['distance'] = new_dist
-                self.zoomChanged.emit(self.camera['distance'])
-                self.update()
+            self.camera = self.camera * np.exp(-delta / 1200.0)
+            self.update()
+
         except Exception:
             import traceback as _tb
             _tb.print_exc()
-
-    def event(self, event):
-        # Intercept gesture events and dispatch to gesture handler
-        try:
-            if event.type() == QEvent.Type.Gesture:
-                return self.gestureEvent(event)
-        except Exception:
-            pass
-        return super().event(event)
-
-    def gestureEvent(self, event):
-        try:
-            for g in event.gestures():
-                if isinstance(g, QPinchGesture):
-                    pinch = g
-                    last = pinch.lastScaleFactor()
-                    cur = pinch.scaleFactor()
-                    if last <= 0.0:
-                        last = 1.0
-                    if cur <= 0.0:
-                        cur = 1.0
-                    ratio = cur / last
-                    # Scale camera distance inversely to pinch scale
-                    new_dist = self.camera['distance'] / ratio
-                    new_dist = max(1.0, min(20.0, new_dist))
-                    if new_dist != self.camera['distance']:
-                        self.camera['distance'] = new_dist
-                        self.zoomChanged.emit(self.camera['distance'])
-                        self.update()
-                        #print(f"New distance: {new_dist:.3f}")
-                    return True
-        except Exception:
-            import traceback as _tb
-            _tb.print_exc()
-        return False
 
     def updateControls(self, controls):
         self.controls.update(controls)

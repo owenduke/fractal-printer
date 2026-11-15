@@ -176,7 +176,6 @@ class ControlsPanel(QScrollArea):
         return self.settings
     
     def set_controls(self, settings):
-        print("Setting controls")
         for i, c in enumerate(settings["coefficients"]):
             self.coeffs[i].components = c
             self.coeffs[i].enabledbox.setChecked(any(c))

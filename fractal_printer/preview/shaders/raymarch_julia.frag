@@ -9,7 +9,8 @@ uniform int iterations;
 uniform int bailout;
 uniform float offset;
 
-uniform vec3 camera; // theta, phi, distance
+uniform vec3 camera; // x, y, z
+uniform vec3 up;     // kx, ky, kz
 uniform float aspect; // ratio of width to hight
 
 #define BAILOUT 1.0e6
@@ -101,23 +102,12 @@ float sceneSDF(vec3 p) {
     return d;
 }
 
-// Simple camera setup
-vec3 getCameraPos() {
-    float theta = camera.x;
-    float phi = camera.y;
-    float r = camera.z;
-    float x = r * sin(phi) * cos(theta);
-    float y = r * cos(phi);
-    float z = r * sin(phi) * sin(theta);
-    return vec3(x, y, z);
-}
 
 // Ray direction from camera through screen
-vec3 getRayDir(vec2 uv, vec3 camPos) {
+vec3 getRayDir(vec2 uv) {
     vec3 target = vec3(0.0, 0.0, 0.0);
-    vec3 forward = normalize(target - camPos);
-    vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), forward));
-    vec3 up = cross(forward, right);
+    vec3 forward = normalize(target - camera);
+    vec3 right = -cross(forward, up);
     float fov = 1.0;
     vec3 ray = normalize(forward + -(uv.x - 0.5) * right * fov + (uv.y - 0.5) * up * fov);
     return ray;
@@ -155,7 +145,6 @@ vec3 shadeSurface(vec3 p, vec3 n, vec3 ro) {
     vec3 lightDir1 = normalize(vec3(1.0, 2.0, 1.0));
     vec3 lightDir2 = normalize(vec3(-1.0, -1.0, -0.5));
 
-
     float diff1 = max(dot(n, lightDir1), 0.0);
     float diff2 = max(dot(n, lightDir2), 0.0);
     float diffuse = diff1 * 0.9 + diff2 * 0.6;
@@ -173,13 +162,13 @@ vec3 shadeSurface(vec3 p, vec3 n, vec3 ro) {
 }
 
 // Trace a reflection ray and return the shaded color (simple single-bounce)
-vec3 traceReflection(vec3 p, vec3 rd, vec3 camPos) {
+vec3 traceReflection(vec3 p, vec3 rd) {
     vec3 origin = p + rd * 0.01;
     vec3 hit;
-    float t = raymarch(origin, rd, hit, 4.0 * length(camPos));
+    float t = raymarch(origin, rd, hit, 4.0 * length(camera));
     if (t > 0.0) {
         vec3 n2 = estimateNormal(hit);
-        return shadeSurface(hit, n2, camPos);
+        return shadeSurface(hit, n2, camera);
     }
     return vec3(0.02, 0.04, 0.06); // environment color
 }
@@ -205,12 +194,11 @@ vec2 correct_aspect(vec2 uv){
     }
 }
 void main() {
-    vec3 camPos = getCameraPos();
     //camPos = vec3(0.01,5,0);
-    vec3 rayDir = getRayDir(correct_aspect(uv), camPos);
+    vec3 rayDir = getRayDir(correct_aspect(uv));
     vec3 pHit;
-    float maxDist = 4.0 * length(camPos);
-    float t = raymarch(camPos, rayDir, pHit, maxDist);
+    float maxDist = 4.0 * length(camera);
+    float t = raymarch(camera, rayDir, pHit, maxDist);
     if (t > 5e5){
         //fragcolor = vec4(1.0, 0.0, 0.0, 1.0); 
         fragColor = vec4(1.0, uv.y*0.1, 0.15, 1.0);
@@ -218,12 +206,12 @@ void main() {
         vec3 n = estimateNormal(pHit);
         float ao = ambientOcclusion(pHit, n);
 
-        vec3 local = shadeSurface(pHit, n, camPos);
+        vec3 local = shadeSurface(pHit, n, camera);
 
         vec3 reflDir = reflect(rayDir, n);
-        vec3 reflColor = traceReflection(pHit, reflDir, camPos);
+        vec3 reflColor = traceReflection(pHit, reflDir);
 
-        vec3 viewDir = normalize(camPos - pHit);
+        vec3 viewDir = normalize(camera - pHit);
         float fresnel = pow(1.0 - max(dot(n, viewDir), 0.0), 5.0);
         float reflectivity = mix(0.15, 0.4, fresnel) * SHINY;
 
