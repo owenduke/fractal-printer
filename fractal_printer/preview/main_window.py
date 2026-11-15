@@ -11,7 +11,7 @@ RANDOM_ORDER = 3
 
 DEFAULT_SETTINGS = {
     "coefficients": [
-        [-0.381, 0.625, 0.794, 0],
+        [0,0,0,0],
         [0,0,0,0],
         [1.0,0,0,0],
         [0,0,0,0],
@@ -22,9 +22,9 @@ DEFAULT_SETTINGS = {
         [0,0,0,0]
     ],
     "power": 2,
-    "slice": 0.02100000000000013,
-    "offset": 0.01,
-    "iterations": 10
+    "slice": 0.0,
+    "offset": 0.005,
+    "iterations": 20
 }
 
 def _format_settings(settings):
@@ -140,9 +140,8 @@ class MainWindow(QMainWindow):
     def on_randomize_settings(self):
         settings = json.loads(json.dumps(self.controls_panel.get_controls()))
 
-        settings["coefficients"] = [
-            [round(random.uniform(-1, 1), 3) for _ in range(4)] if n <= RANDOM_ORDER else [0, 0, 0, 0]
-            for n in range(len(settings["coefficients"]))
-        ]
-        settings["power"] = RANDOM_ORDER
+        for order in range(9):
+            if self.controls_panel.coeffs[order].enabledbox.isChecked():
+                settings["coefficients"][order] = [round(random.uniform(-1, 1), 3) for _ in range(4)]
+ 
         self.controls_panel.set_controls(settings)
